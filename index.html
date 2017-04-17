@@ -1,3 +1,128 @@
 <html>
- teste
+ <head>
+    <title>Site do Crisma</title>
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+		<link rel="stylesheet" href="screen.css" type="text/css">
+		<script type="text/javascript">
+      var CLIENT_ID = '68779037531.apps.googleusercontent.com';
+      var SCOPES = 'https://www.googleapis.com/auth/drive.install https://www.googleapis.com/auth/drive.readonly';
+
+			function handleClientLoad() {
+				checkAuth();
+			}
+
+      function checkAuth() {
+				gapi.auth.authorize(
+						{'client_id': CLIENT_ID, 'scope': SCOPES, 'immediate': true},
+						handleAuthResult);
+			}
+
+			function handleAuthResult(authResult) {
+				var authPanel = document.getElementById('authorizePanel');
+				authPanel.style.display = 'none';
+				if (authResult && !authResult.error) {
+					openFile();
+				} else {
+					// No access token could be retrieved, show the button to start the authorization flow.
+					showSpinner(false);
+					authPanel.style.display = 'inline-block';
+					document.getElementById('authorizeButton').onclick = function() {
+							authPanel.style.display = 'none';
+							showSpinner(true);
+							gapi.auth.authorize(
+									{'client_id': CLIENT_ID, 'scope': SCOPES, 'immediate': false},
+									handleAuthResult);
+					};
+				}
+			}
+
+			function openFile() {
+				var state = getParameterByName("state");
+				if (state) {
+					var stateObj = eval("(" + state + ')');
+					gapi.client.load('drive', 'v2', function() {
+						var request = gapi.client.drive.files.get({
+							'fileId': stateObj.ids[0],
+							'fields' : "title,mimeType,description,downloadUrl"
+						});
+						request.execute(function(resp) {
+							if (resp.downloadUrl) {
+								downloadFile(resp, function(content) {
+									showSpinner(false);
+									if (content) {
+										document.getElementById('iframe').contentWindow.document.write(content);
+										document.getElementById('iframe').style.display = 'block';
+									}
+								});
+							} else {
+								showSpinner(false);
+								document.getElementById('infoPanel').style.display = 'inline-block';
+							}
+						});
+					});
+				} else {
+					showSpinner(false);
+					document.getElementById('infoPanel').style.display = 'inline-block';
+				}
+			}
+
+			function downloadFile(file, callback) {
+				if (file.downloadUrl) {
+					var accessToken = gapi.auth.getToken().access_token;
+					var xhr = new XMLHttpRequest();
+					xhr.open('GET', file.downloadUrl);
+					xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+					xhr.onload = function() {
+						callback(xhr.responseText);
+					};
+					xhr.onerror = function() {
+						callback(null);
+					};
+					xhr.send();
+				} else {
+					callback(null);
+				}
+			}
+
+			function showSpinner(show) {
+					var spinner = document.getElementById('spinner');
+					if (spinner) spinner.style.display = show ? 'inline-block' : 'none';
+			} 
+
+			function getParameterByName(name) {
+				var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+				return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+			}
+		</script>
+    <script type="text/javascript" src="https://apis.google.com/js/client.js?onload=handleClientLoad"></script>
+  </head>
+  <body>
+    <table>
+      <tr>
+       <td>
+				<div id="spinner">
+					<div class="spinner" id="spinner_01"></div>
+					<div class="spinner" id="spinner_02"></div>
+					<div class="spinner" id="spinner_03"></div>
+					<div class="spinner" id="spinner_04"></div>
+					<div class="spinner" id="spinner_05"></div>
+					<div class="spinner" id="spinner_06"></div>
+					<div class="spinner" id="spinner_07"></div>
+					<div class="spinner" id="spinner_08"></div>
+				</div>
+        <div id="authorizePanel" style="display:none">
+          <img src="icon-128.png" width="128" height="128" />
+          <h3>You need to authorize the HTML Viewer to be able to view files.<br/>It will also be installed to your drive.</h3>
+				  <input type="button" id="authorizeButton" value="Authorize" />
+        </div>
+        <div id="infoPanel" style="display:none">
+					<h3>Go to "Drive" -> "Manage Apps" and set HTML Viewer as default app for HTML files.</h3>
+				</div>
+				<iframe id="iframe" style="height:100%;width:100%;border:none;display:none"/>
+      </td>
+     </tr>
+    </table>
+  </body>
 </html>
